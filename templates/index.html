@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Envío de correos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AUTOMATIZACIÓN DE CORREOS</p>
+        <h1>Preparar envío</h1>
+      </div>
+      <div class="account-actions">
+        <a class="button secondary" href="{{ url_for('history') }}">Historial</a>
+        <span class="server-tag">{{ current_user.username }}</span>
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button secondary" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </header>
+
+    {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+    <p class="intro">Carga la hoja, revisa los datos y personaliza el mensaje. No se enviará nada hasta que confirmes el lote.</p>
+
+    <form action="{{ url_for('preview') }}" method="post" enctype="multipart/form-data" class="form-stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <section class="section">
+        <h2>1. Archivo de destinatarios</h2>
+        <label class="field-label" for="spreadsheet">Seleccionar CSV o Excel (.xlsx)</label>
+        <input id="spreadsheet" name="spreadsheet" type="file" accept=".csv,.xlsx" required>
+        <p class="hint">La primera fila debe contener encabezados. EMPRESA, DESTINATARIO y CC son obligatorios.</p>
+      </section>
+
+      <section class="section">
+        <h2>2. Adjuntos</h2>
+        <fieldset class="choice-row">
+          <legend>¿Adjuntar archivos?</legend>
+          <label><input type="radio" name="attach_enabled" value="no" checked> No</label>
+          <label><input type="radio" name="attach_enabled" value="yes"> Sí</label>
+        </fieldset>
+        <div id="attachment-picker" class="hidden">
+          <label class="field-label" for="attachments">Selecciona los documentos que corresponden a la columna ARCHIVO</label>
+          <input id="attachments" name="attachments" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp">
+          <p class="hint">Formatos aceptados: PDF, DOC/DOCX, XLS/XLSX, CSV, TXT, PNG, JPG, GIF y WEBP. El nombre debe coincidir con ARCHIVO; una fila sin nombre se enviará sin adjunto.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>3. Asunto</h2>
+        <label class="field-label" for="subject-prefix">Parte 1: texto inicial</label>
+        <input id="subject-prefix" name="subject_prefix" value="Trabajos de emergencia" maxlength="160">
+        <p class="subject-example"><span id="subject-example-prefix">Trabajos de emergencia</span><b> | </b><span>EMPRESA de cada fila</span><b> | </b><span id="subject-example-suffix">23 y 24 de Setiembre</span></p>
+        <fieldset class="choice-row">
+          <legend>Parte 3 del asunto</legend>
+          <label><input type="radio" name="suffix_mode" value="fixed" checked> Texto fijo</label>
+          <label><input type="radio" name="suffix_mode" value="fecha"> Columna FECHA</label>
+        </fieldset>
+        <div id="suffix-fixed">
+          <label class="field-label" for="suffix-text">Texto fijo</label>
+          <input id="suffix-text" name="suffix_text" value="23 y 24 de Setiembre" maxlength="160">
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>4. Plantilla del mensaje</h2>
+        <label class="field-label" for="body-template">Mensaje</label>
+        <textarea id="body-template" name="body_template" rows="15" spellcheck="false">{{ default_text_body }}</textarea>
+        <p class="hint">Marcadores disponibles: <code>{{ '{{EMPRESA}}' }}</code>, <code>{{ '{{SEDE}}' }}</code>, <code>{{ '{{NC}}' }}</code>, <code>{{ '{{FECHA}}' }}</code>, <code>{{ '{{MOTIVO}}' }}</code>, <code>{{ '{{FECHA_INICIO}}' }}</code>, <code>{{ '{{HORA_INICIO}}' }}</code>, <code>{{ '{{FECHA_TERMINO}}' }}</code>, <code>{{ '{{HORA_CULMINACION}}' }}</code>, <code>{{ '{{DURACION}}' }}</code>. Para ocultar un bloque opcional, usa <code>{{ '{{#SEDE}}...{{/SEDE}}' }}</code> o <code>{{ '{{#NC}}...{{/NC}}' }}</code>.</p>
+        <div class="fixed-signature">
+          <h3>Firma fija incluida en todos los correos</h3>
+          <p><strong>Plataforma de Atención Clientes (PAC)</strong></p>
+          <p>Gtd Perú<br>Av. La Encalada 1257, piso 14, Santiago de Surco, Lima, Perú<br>Tel: (51 1) 743-0911 / 0800-7-0202</p>
+          <img src="https://www.gtd.cl/images/079ff2755e4e1362b5e96035e0f75d4e/original.jpg" alt="Gtd Perú">
+          <p><strong>Estimado Cliente:</strong> Tener en cuenta que posterior a las 24 horas de haber solicitado su validación, al no tener respuesta por este medio se procederá al cierre administrativo del caso.</p>
+        </div>
+      </section>
+
+      <section class="section transport-note">
+        <h2>Cuenta de envío</h2>
+        <p><strong>{{ sender }}</strong></p>
+        <p>El programa cifra obligatoriamente la conexión con STARTTLS. Si el servidor no ofrece una conexión segura, el envío se detendrá.</p>
+      </section>
+      <button class="button primary" type="submit">Validar y ver vista previa</button>
+    </form>
+    <footer>Los correos no se envían al cargar el archivo. El envío requiere una confirmación adicional.</footer>
+  </main>
+  <script>
+    const attachmentPicker = document.getElementById('attachment-picker');
+    document.querySelectorAll('input[name="attach_enabled"]').forEach(input => input.addEventListener('change', () => {
+      attachmentPicker.classList.toggle('hidden', document.querySelector('input[name="attach_enabled"]:checked').value !== 'yes');
+    }));
+    const fixedSuffix = document.getElementById('suffix-fixed');
+    document.querySelectorAll('input[name="suffix_mode"]').forEach(input => input.addEventListener('change', () => {
+      fixedSuffix.classList.toggle('hidden', document.querySelector('input[name="suffix_mode"]:checked').value !== 'fixed');
+      updateSubject();
+    }));
+    function updateSubject() {
+      document.getElementById('subject-example-prefix').textContent = document.getElementById('subject-prefix').value || ' ';
+      document.getElementById('subject-example-suffix').textContent = document.querySelector('input[name="suffix_mode"]:checked').value === 'fecha' ? 'FECHA de cada fila' : (document.getElementById('suffix-text').value || ' ');
+    }
+    document.getElementById('subject-prefix').addEventListener('input', updateSubject);
+    document.getElementById('suffix-text').addEventListener('input', updateSubject);
+  </script>
+</body>
+</html>

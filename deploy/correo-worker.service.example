@@ -1,0 +1,29 @@
+[Unit]
+Description=Worker de envios SMTP de la aplicacion de correos
+After=network-online.target correo-web.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=correoapp
+Group=correoapp
+WorkingDirectory=/opt/correo-automatizado
+EnvironmentFile=/etc/correo-automatizado/app.env
+Environment=APP_DATA_DIR=/var/lib/correo-automatizado
+StateDirectory=correo-automatizado
+StateDirectoryMode=0700
+ExecStart=/opt/correo-automatizado/.venv/bin/python /opt/correo-automatizado/worker.py
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+# Despues de validar SMTP, provisionar el secreto con permisos root y
+# descomentar la linea siguiente:
+# LoadCredential=smtp_password:/etc/correo-automatizado/smtp_password
+
+[Install]
+WantedBy=multi-user.target

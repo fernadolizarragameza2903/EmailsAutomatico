@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historial | Envío de correos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell wide">
+    <header class="topbar">
+      <div><p class="eyebrow">REGISTROS DEL USUARIO</p><h1>Historial de lotes</h1></div>
+      <div class="account-actions">
+        <a class="button secondary" href="{{ url_for('index') }}">Nuevo lote</a>
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button secondary" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </header>
+    <section class="section">
+      {% if jobs %}
+        <div class="table-wrap"><table>
+          <thead><tr><th>Creado</th><th>Archivo</th><th>Estado</th><th>Filas</th><th>Correctos</th><th>Errores</th><th></th></tr></thead>
+          <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td>{{ job.created_at }}</td><td>{{ job.source_name }}</td>
+              <td>{{ job.status }}</td>
+              <td>{{ job.total_rows }}</td><td>{{ job.sent_count }}</td><td>{{ job.error_count }}</td>
+              <td><a href="{{ url_for('history_detail', campaign_id=job.id) }}">Ver detalle</a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% else %}
+        <p>Aún no hay lotes registrados para este usuario.</p>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

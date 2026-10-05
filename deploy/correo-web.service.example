@@ -1,0 +1,27 @@
+[Unit]
+Description=Aplicacion Flask de automatizacion de correos (Gunicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=correoapp
+Group=www-data
+WorkingDirectory=/opt/correo-automatizado
+EnvironmentFile=/etc/correo-automatizado/app.env
+Environment=APP_DATA_DIR=/var/lib/correo-automatizado
+StateDirectory=correo-automatizado
+StateDirectoryMode=0700
+RuntimeDirectory=correo-automatizado
+RuntimeDirectoryMode=0750
+ExecStart=/opt/correo-automatizado/.venv/bin/gunicorn --workers 2 --bind unix:/run/correo-automatizado/gunicorn.sock --umask 007 --timeout 60 --access-logfile - --error-logfile - app:app
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

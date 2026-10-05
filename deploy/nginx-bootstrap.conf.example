@@ -1,0 +1,18 @@
+# Configuracion temporal para el desafio HTTP-01 de Let's Encrypt.
+# Reemplazar DOMINIO_REAL con el dominio confirmado antes de instalar.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name DOMINIO_REAL;
+    server_tokens off;
+    client_max_body_size 25m;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 404;
+    }
+}

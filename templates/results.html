@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultado de envío</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar"><div><p class="eyebrow">RESULTADO</p><h1>{% if job and job.status in ['queued', 'processing'] %}Lote en proceso{% else %}Proceso terminado{% endif %}</h1></div><div class="account-actions"><a class="button secondary" href="{{ url_for('history') }}">Historial</a><a class="button secondary" href="{{ url_for('index') }}">Nuevo lote</a></div></header>
+    {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+    <section class="section">
+      <h2>Estado por fila</h2>
+      <div class="table-wrap"><table><thead><tr><th>Fila</th><th>Destinatario</th><th>Adjunto</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody>
+      {% for result in results %}<tr><td>{{ result.row }}</td><td>{{ result.recipient|default('', true) }}</td><td>{{ result.attachment|default('', true) }}</td><td><span class="status {{ 'good' if result.ok else ('pending' if result.pending else 'bad') }}">{{ result.status_label|default(('Enviado' if result.ok else 'Error'), true) }}</span></td><td>{{ result.detail }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <p class="hint">El resultado está guardado en el historial de tu usuario. Los adjuntos cargados se eliminan del almacenamiento temporal al finalizar el lote.</p>
+  </main>
+</body>
+</html>

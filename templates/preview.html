@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vista previa de correos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell wide">
+    <header class="topbar">
+      <div><p class="eyebrow">REVISIÓN DEL LOTE</p><h1>Vista previa</h1></div>
+      <div class="account-actions">
+        <a class="button secondary" href="{{ url_for('history') }}">Historial</a>
+        <span class="server-tag">{{ current_user.username }}</span>
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button secondary" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </header>
+    {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+    <div class="summary">
+      <span><strong>Archivo:</strong> {{ campaign.source_name }}</span>
+      <span><strong>Filas:</strong> {{ campaign.rows|length }}</span>
+      <span><strong>Adjuntos:</strong> {{ 'Activados' if campaign.attach_enabled else 'Desactivados' }}</span>
+    </div>
+
+    {% if campaign.problems %}
+      <section class="section validation-errors">
+        <h2>No se puede enviar todavía</h2>
+        <p>Corrige estos datos en el CSV o Excel y vuelve a cargarlo. No se enviará ninguna fila de este lote.</p>
+        {% for problem in campaign.problems %}
+          <div class="row-error"><strong>Fila {{ problem.row }}</strong><ul>{% for item in problem.errors %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <section class="section">
+      <h2>Filas leídas</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Fila</th><th>Empresa</th><th>Destinatario</th><th>CC</th><th>Archivo</th><th>Estado</th></tr></thead>
+        <tbody>
+        {% for row in campaign.rows %}
+          {% set issue = namespace(found=false) %}
+          {% for problem in campaign.problems %}{% if problem.row == row._row_number %}{% set issue.found = true %}{% endif %}{% endfor %}
+          <tr><td>{{ row._row_number }}</td><td>{{ row.EMPRESA }}</td><td>{{ row.DESTINATARIO }}</td><td>{{ row.CC }}</td><td>{{ row.get('ARCHIVO', '') if campaign.attach_enabled else 'No se adjunta' }}</td><td>{% if issue.found %}<span class="status bad">Revisar</span>{% else %}<span class="status good">Listo</span>{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section">
+      <h2>Mensajes de muestra</h2>
+      {% for row in campaign.rows[:5] %}
+        <article class="message-preview">
+          <div class="message-meta"><p><strong>Asunto:</strong> {{ make_subject(row, campaign.subject_prefix, campaign.suffix_mode, campaign.suffix_text) }}</p><p><strong>Para:</strong> {{ row.DESTINATARIO }}</p><p><strong>CC:</strong> {{ row.CC }}</p></div>
+          <pre class="plain-preview">{{ render_body(campaign.body_template, row, false) }}</pre>
+          <div class="signature-preview">{{ fixed_signature }}</div>
+        </article>
+      {% endfor %}
+      {% if campaign.rows|length > 5 %}<p class="hint">Se muestran los primeros 5 mensajes; el resto usa la misma plantilla y sus propios datos.</p>{% endif %}
+    </section>
+
+    {% if not campaign.problems and campaign.can_execute %}
+      <section class="section send-panel">
+          <h2>Confirmar envío</h2>
+          <p>El lote se enviará a los destinatarios revisados. Habrá una pausa de 30 segundos entre filas.</p>
+          <form action="{{ url_for('send', campaign_id=campaign_id) }}" method="post" class="form-stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Clave SMTP
+              <input type="password" name="smtp_password" autocomplete="current-password" required>
+            </label>
+            <p class="secure-transport"><strong>Conexión protegida:</strong> STARTTLS obligatorio. La clave se usará solo para este envío y no se guardará.</p>
+            <label class="confirm-line"><input type="checkbox" name="confirm_send" value="yes" required> Confirmo que revisé la vista previa y deseo enviar estos correos.</label>
+            <button class="button danger" type="submit">Enviar {{ campaign.rows|length }} correos</button>
+          </form>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>
